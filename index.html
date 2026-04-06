@@ -147,7 +147,7 @@
 
 <script>
     // ⚠️ ضع هنا رابط تطبيق Google Apps Script بعد النشر
-    const GOOGLE_SCRIPT_URL = 'script.google.com/macros/s/AKfycbwek848ESigpvdzjwESGcWi7TpnyAoIZPYLX_MjNTkTYzysJq9lrrcIRgPReapA0n3BJQ/exec';
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwek848ESigpvdzjwESGcWi7TpnyAoIZPYLX_MjNTkTYzysJq9lrrcIRgPReapA0n3BJQ/exec';
 
     // تهيئة الخريطة (مركزها العالم العربي)
     const map = L.map('map').setView([24.7136, 46.6753], 5); // الرياض كمركز تقريبي
@@ -252,7 +252,7 @@
         } catch (error) {
             console.error(error);
             let msg = '❌ فشل الإرسال. تأكد من الرابط والإنترنت.';
-            if (GOOGLE_SCRIPT_URL === 'script.google.com/macros/s/AKfycbwek848ESigpvdzjwESGcWi7TpnyAoIZPYLX_MjNTkTYzysJq9lrrcIRgPReapA0n3BJQ/exec') msg = '⚠️ لم يتم تعيين رابط Google Apps Script بعد. اتبع التعليمات.';
+            if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwek848ESigpvdzjwESGcWi7TpnyAoIZPYLX_MjNTkTYzysJq9lrrcIRgPReapA0n3BJQ/exec') msg = '⚠️ لم يتم تعيين رابط Google Apps Script بعد. اتبع التعليمات.';
             showMessage(msg, 'error');
         }
     }
@@ -260,7 +260,7 @@
     sendBtn.addEventListener('click', sendToSheet);
 
     // تنبيه إذا لم يتم تعيين الرابط
-    if (GOOGLE_SCRIPT_URL === 'script.google.com/macros/s/AKfycbwek848ESigpvdzjwESGcWi7TpnyAoIZPYLX_MjNTkTYzysJq9lrrcIRgPReapA0n3BJQ/exec') {
+    if (GOOGLE_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwek848ESigpvdzjwESGcWi7TpnyAoIZPYLX_MjNTkTYzysJq9lrrcIRgPReapA0n3BJQ/exec') {
         setTimeout(() => {
             showMessage('🔧 الرجاء تعيين رابط Google Apps Script في الكود', 'error');
         }, 500);
