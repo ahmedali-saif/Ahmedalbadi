@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000; opacity: 0; transition: opacity 0.3s ease;
+}
+.modal-overlay.show { opacity: 1; }
+.modal-box {
+  background: white; border-radius: 16px;
+  box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+  padding: 24px 28px; width: 90%; max-width: 400px;
+  text-align: center; animation: modalSlideIn 0.3s ease;
+}
+@keyframes modalSlideIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.modal-box h3 {
+  margin-top: 0; margin-bottom: 16px; font-size: 1.4rem; color: #333;
+  border-bottom: 2px solid #00b8d9; display: inline-block; padding-bottom: 6px;
+}
+.modal-box p { margin: 20px 0; font-size: 1rem; color: #555; line-height: 1.5; }
+.modal-buttons { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+.modal-btn {
+  padding: 8px 24px; border: none; border-radius: 30px;
+  font-size: 0.9rem; font-weight: bold; cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+.modal-btn.confirm { background: #2bb673; color: white; }
+.modal-btn.confirm:hover { background: #239a5f; transform: scale(1.02); }
+.modal-btn.cancel  { background: #e65050; color: white; }
+.modal-btn.cancel:hover  { background: #c93a3a; transform: scale(1.02); }
+
+body { font-family: Tahoma, Arial; margin: 0; padding: 10px; background: #d9d9d9; direction: rtl; }
+
+.top-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 20px; background: #f8ffff; border: 4px solid #00b8d9;
+  padding: 8px 10px; border-radius: 4px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.top-group { display: flex; align-items: center; gap: 8px; }
+.top-group label { font-weight: bold; }
+.top-group input { width: 160px; padding: 5px; border: 2px solid #ddd; border-radius: 3px; }
+
+.main-container { display: flex; gap: 14px; align-items: flex-start; }
+.right-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+
+.first-row { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+.other-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+
+.card {
+  background: #f8ffff; border: 4px solid #00b8d9;
+  border-radius: 4px; padding: 8px; display: flex; flex-direction: column;
+}
+.card h3 {
+  background: #00b8d9; color: #fff; padding: 6px;
+  text-align: center; margin: -8px -8px 8px -8px; font-size: 1rem;
+}
+.inner-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.inner-table th, .inner-table td {
+  border: 1px solid #ccc; padding: 6px; text-align: center;
+  font-size: 12px; vertical-align: middle;
+}
+.inner-table th { background-color: #e6f7ff; font-weight: bold; }
+.inner-table input {
+  width: 70px; text-align: center; padding: 4px;
+  margin: 0 auto; display: inline-block; box-sizing: border-box;
+}
+
+.row { display: flex; justify-content: space-between; margin: 4px 0; }
+.row label { width: 100px; }
+input, select { padding: 4px 6px; border: 2px solid #ddd; border-radius: 3px; font-size: 13px; }
+.row input, .row select { width: 150px; }
+.card select { width: 100%; margin-bottom: 8px; }
+textarea {
+  width: 100%; height: 70px; margin-top: 5px;
+  box-sizing: border-box; font-size: 12px; padding: 5px;
+}
+.full-width { grid-column: 1 / -1; }
+.btns { display: flex; justify-content: center; gap: 12px; margin: 4px 0; flex-wrap: wrap; }
+button { padding: 8px 20px; border: 0; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+.save   { background: #2bb673; color: white; }
+.update { background: #2196F3; color: white; }
+.clear  { background: #ffb347; color: white; }
+.delete { background: #e65050; color: white; }
+.close  { background: #555;    color: white; }
+.main-menu    { background: #9b59b6; color: white; }
+.search-record{ background: #9b59b6; color: white; }
+input[readonly]{ background-color: #f0f0f0; cursor: default; }
+
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background-color: #333; color: #000; padding: 20px 60px;
+  border-radius: 20px; font-size: 25px; font-weight: bold;
+  z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  transition: opacity 0.3s ease; opacity: 0; pointer-events: none;
+}
+.toast.success { background-color: #2bb673; }
+.toast.error   { background-color: #e65050; }
+.toast.info    { background-color: #2196F3; }
+.toast.show    { opacity: 1; }
+
+/* ============================================================
+   شريط التبديل بين السجلين
+   ============================================================ */
+.records-toggle-bar {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #f8ffff; border: 4px solid #00b8d9;
+  border-radius: 4px; padding: 8px 14px;
+}
+.toggle-btn {
+  padding: 8px 22px; border: 2px solid transparent; border-radius: 20px;
+  font-weight: bold; font-size: 0.9rem; cursor: pointer;
+  transition: all 0.25s ease; background: #e0f5fb; color: #007a99;
+}
+.toggle-btn.active {
+  background: #00b8d9; color: #fff; border-color: #007a99;
+  box-shadow: 0 2px 8px rgba(0,184,217,0.35);
+}
+.toggle-btn:hover:not(.active) { background: #b3e8f5; }
+
+.records-section { display: none; animation: fadeInRecord 0.3s ease; }
+.records-section.visible { display: block; }
+@keyframes fadeInRecord {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* جدول السجلات */
+.table-container { overflow: auto; max-height: 250px; position: relative; }
+table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+th {
+  position: sticky; top: 0; background-color: #f0f0f0; z-index: 10;
+  border: 1px solid #ccc; padding: 8px 4px; font-size: 12px; text-align: center;
+}
+td { border: 1px solid #ccc; padding: 4px; font-size: 12px; text-align: center; }
+tr.data-missing { background-color: #ff0000 !important; color: #000 !important; }
+#dataTable tbody tr { cursor: pointer; }
+#dataTable tbody tr:hover { background-color: #ffff00 !important; }
+
+/* نافذة تأكيد */
+.custom-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4); display: flex; align-items: center;
+  justify-content: center; z-index: 2000;
+}
+@keyframes fadeIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+#searchCard { display: none; }
+#treatmentPlace { margin-bottom: 20px; display: block; width: 100%; box-sizing: border-box; }
+#dataEntryInput, #dataUpdaterInput { margin-top: 3px; margin-bottom: 20px; display: block; width: 100%; box-sizing: border-box; }
+
+input, select, textarea { text-align: center; padding: 8px 10px; height: auto; }
+select { text-align-last: center; }
+#receipt, #amount { width: 250px; }
+
+/* واجهة العلاج */
+.diagnosis-row { display: grid; grid-template-columns: 2fr 1fr 0.7fr; gap: 6px; margin: 4px 0; }
+.diagnosis-row select, .diagnosis-row input { width: 100%; box-sizing: border-box; font-size: 12px; padding: 5px; }
+.drug-row { display: grid; grid-template-columns: 2.5fr 1fr; gap: 6px; margin: 4px 0; }
+.drug-row input, .drug-row select { width: 100%; box-sizing: border-box; }
+.animals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.animal-item { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.animal-item label { width: 50px; }
+.animal-item input { width: 80px; }
+
+@media(max-width:1100px) {
+  .first-row { grid-template-columns: 1fr; }
+  .other-cards { grid-template-columns: 1fr; }
+  .main-container { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===================================================
+     واجهة التحصين
+     =================================================== -->
+<div class="top-bar">
+  <div class="top-group">
+    <label>إدخل رقم حالة التحصين</label>
+    <input type="text" id="caseNumber">
+  </div>
+  <div class="top-group">
+    <label>✏️ بحث / تحديث</label>
+    <input type="text" id="searchUpdate">
+  </div>
+  <div class="top-group">
+    <label>📅 تعديل التاريخ</label>
+    <input type="date" id="topDate" readonly>
+  </div>
+</div>
+
+<div class="main-container">
+  <div class="right-panel">
+
+    <div class="first-row">
+      <!-- بيانات المربي -->
+      <div class="card">
+        <h3>بيانات المربي</h3>
+        <div class="row"><label>رقم هاتف</label>
+          <input list="phoneList" id="phoneInput" style="width:80%;" placeholder="اختر أو اكتب رقم الهاتف">
+          <datalist id="phoneList"></datalist>
+        </div>
+        <div class="row"><label>الاسم</label><input id="nameInput" style="width:80%;"></div>
+        <div class="row"><label>رقم الحيازة</label><input id="possessionInput" style="width:80%;"></div>
+        <div class="row"><label>المنطقة</label><input id="regionInput" style="width:80%;"></div>
+        <div class="row"><label>الرقم المدني</label><input id="civilInput" style="width:80%;"></div>
+        <div class="row"><label>التاريخ</label><input type="date" id="financialDate" style="width:80%;"></div>
+      </div>
+
+      <!-- الأمراض الوبائية -->
+      <div class="card">
+        <h3>الأمراض الوبائية</h3>
+        <table class="inner-table">
+          <thead>
+            <tr><th>نوع اللقاح</th><th>أغنام</th><th>ماعز</th><th>أبقار</th><th>جمل</th><th>خيول</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>التسمم المعوي</td>
+              <td><input type="number" id="intox_sheep" placeholder="عدد"></td>
+              <td><input type="number" id="intox_goat" placeholder="عدد"></td>
+              <td><input type="number" id="intox_cow" placeholder="عدد" disabled></td>
+              <td><input type="number" id="intox_camel" placeholder="عدد" disabled></td>
+              <td><input type="number" id="intox_horse" placeholder="عدد" disabled></td>
+            </tr>
+            <tr>
+              <td>طاعون/جدري(مركب)</td>
+              <td><input type="number" id="pock_sheep" placeholder="عدد"></td>
+              <td><input type="number" id="pock_goat" placeholder="عدد"></td>
+              <td><input type="number" id="pock_cow" placeholder="عدد" disabled></td>
+              <td><input type="number" id="pock_camel" placeholder="عدد" disabled></td>
+              <td><input type="number" id="pock_horse" placeholder="عدد" disabled></td>
+            </tr>
+            <tr>
+              <td>الحمى القلاعية</td>
+              <td><input type="number" id="fmd_sheep" placeholder="عدد"></td>
+              <td><input type="number" id="fmd_goat" placeholder="عدد"></td>
+              <td><input type="number" id="fmd_cow" placeholder="عدد"></td>
+              <td><input type="number" id="fmd_camel" placeholder="عدد" disabled></td>
+              <td><input type="number" id="fmd_horse" placeholder="عدد" disabled></td>
+            </tr>
+            <tr>
+              <td>التهاب الجلد العقدي</td>
+              <td><input type="number" id="lumpy_sheep" placeholder="عدد" disabled></td>
+              <td><input type="number" id="lumpy_goat" placeholder="عدد" disabled></td>
+              <td><input type="number" id="lumpy_cow" placeholder="عدد"></td>
+              <td><input type="number" id="lumpy_camel" placeholder="عدد" disabled></td>
+              <td><input type="number" id="lumpy_horse" placeholder="عدد" disabled></td>
+            </tr>
+            <tr>
+              <td>السعار</td>
+              <td><input type="number" id="rabies_sheep" placeholder="عدد"></td>
+              <td><input type="number" id="rabies_goat" placeholder="عدد"></td>
+              <td><input type="number" id="rabies_cow" placeholder="عدد"></td>
+              <td><input type="number" id="rabies_camel" placeholder="عدد"></td>
+              <td><input type="number" id="rabies_horse" placeholder="عدد"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div><!-- /first-row -->
+
+    <!-- البطاقات الأخرى -->
+    <div class="other-cards">
+      <div class="card">
+        <h3>مدخل البيانات</h3>
+        <input list="dataEntryList" id="dataEntryInput" placeholder="اختر مدخل البيانات">
+        <datalist id="dataEntryList"></datalist>
+        <h3>مدخل البيانات (التحديث)</h3>
+        <input list="dataUpdaterList" id="dataUpdaterInput" placeholder="اختر مدخل البيانات للتحديث">
+        <datalist id="dataUpdaterList"></datalist>
+        <h3>الملاحظات</h3>
+        <textarea id="notes" placeholder="أضف ملاحظات إضافية هنا..."></textarea>
+      </div>
+      <div class="card" style="grid-column:span 2;">
+        <h3>بيانات التحصين</h3>
+        <div id="vaccinationDataDisplay" style="overflow-x:auto; max-height:200px; margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- أزرار التحصين -->
+    <div class="top-bar" style="justify-content:center; gap:12px; background:#eef7ff;">
+      <button class="save"   id="saveBtn">حفظ</button>
+      <button class="update" id="updateBtn">تحديث</button>
+      <button class="clear"  id="clearBtn">مسح</button>
+      <button class="delete" id="deleteBtn">حذف البيانات</button>
+      <button class="close"  onclick="google.script.host.close()">إغلاق</button>
+      <button id="searchBtn">بحث</button>
+      <button class="main-menu"    id="mainMenuBtn">القائمة الرئيسية</button>
+      <button class="search-record" id="searchRecordBtn">البحث في سجل العلاج</button>
+    </div>
+    <input type="hidden" id="copyingdata" readonly>
+
+    <!-- ============================================================
+         شريط التبديل بين السجلين
+         ============================================================ -->
+    <div class="records-toggle-bar">
+      <span style="font-weight:bold; color:#555; font-size:0.95rem;">📂 عرض السجل:</span>
+      <button class="toggle-btn active" id="btnShowTreatment" onclick="showRecord('treatment')">
+        📋 سجل العلاج
+      </button>
+      <button class="toggle-btn" id="btnShowVaccination" onclick="showRecord('vaccination')">
+        💉 سجل التحصين
+      </button>
+    </div>
+
+    <!-- سجل العلاج اليومي -->
+    <div class="records-section visible" id="sectionTreatment">
+      <div class="card">
+        <h3>⬇️ السجل اليومي — العلاج</h3>
+        <div class="table-container">
+          <table id="dataTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- سجل التحصين اليومي -->
+    <div class="records-section" id="sectionVaccination">
+      <div class="card">
+        <h3>💉 السجل اليومي — التحصين</h3>
+        <div class="table-container">
+          <table id="vaccinationDailyTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- بطاقة البحث -->
+    <div class="card" id="searchCard">
+      <h3>البحث في سجل العلاج</h3>
+      <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+        <label>من تاريخ:</label><input type="date" id="searchStartDate">
+        <label>إلى تاريخ:</label><input type="date" id="searchEndDate">
+        <button id="backToMainBtn" style="background:#e67e22; color:white;">⬅️ رجوع</button>
+      </div>
+      <div style="text-align:center; margin-bottom:10px;">
+        <input type="text" id="searchKeyword" placeholder="اكتب كلمة البحث..." style="width:250px;">
+      </div>
+      <div class="table-container"><table id="searchTable"></table></div>
+    </div>
+
+  </div><!-- /right-panel التحصين -->
+</div><!-- /main-container التحصين -->
+
+
+<!-- ===================================================
+     واجهة العلاج
+     =================================================== -->
+<div class="top-bar" style="margin-top:16px;">
+  <div class="top-group">
+    <label>🔍 إدخل رقم الحالة العلاجية</label>
+    <input type="text" id="treatCaseNumber">
+  </div>
+  <div class="top-group">
+    <label>✏️ بحث / تحديث</label>
+    <input type="text" id="treatSearchUpdate">
+  </div>
+  <div class="top-group">
+    <label>📅 تعديل التاريخ</label>
+    <input type="date" id="treatTopDate" readonly>
+  </div>
+</div>
+
+<div class="main-container">
+  <div class="right-panel" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+
+    <div class="card">
+      <h3>بيانات المربي</h3>
+      <div class="row"><label>رقم هاتف</label>
+        <input list="treatPhoneList" id="treatPhoneInput" style="width:265px;" placeholder="اختر أو اكتب رقم الهاتف">
+        <datalist id="treatPhoneList"></datalist>
+      </div>
+      <div class="row"><label>الاسم الثلاثي</label><input id="treatNameInput" style="width:250px;"></div>
+      <div class="row"><label>رقم الحيازة</label><input id="treatPossessionInput" style="width:250px;"></div>
+      <div class="row"><label>المنطقة</label><input id="treatRegionInput" style="width:250px;"></div>
+      <div class="row"><label>الرقم المدني</label><input id="treatCivilInput" style="width:250px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>تشخيص المرض</h3>
+      <div class="diagnosis-row">
+        <input list="diseaseList" id="diseaseInput" placeholder="المرض">
+        <datalist id="diseaseList"></datalist>
+        <input list="typeListFixed" class="type-input" placeholder="نوع الحيوان">
+        <input type="number" placeholder="العدد">
+      </div>
+      <div class="diagnosis-row"><input list="diseaseList" class="disease-input" placeholder="المرض"><input list="typeListFixed" class="type-select" placeholder="نوع الحيوان"><input type="number" placeholder="العدد"></div>
+      <div class="diagnosis-row"><input list="diseaseList" class="disease-input" placeholder="المرض"><input list="typeListFixed" class="type-select" placeholder="نوع الحيوان"><input type="number" placeholder="العدد"></div>
+      <div class="diagnosis-row"><input list="diseaseList" class="disease-input" placeholder="المرض"><input list="typeListFixed" class="type-select" placeholder="نوع الحيوان"><input type="number" placeholder="العدد"></div>
+      <div class="diagnosis-row"><input list="diseaseList" class="disease-input" placeholder="المرض"><input list="typeListFixed" class="type-select" placeholder="نوع الحيوان"><input type="number" placeholder="العدد"></div>
+    </div>
+
+    <div class="card">
+      <h3>الأدوية</h3>
+      <div class="drug-row"><input list="drugList" class="drug-input" placeholder="دواء"><datalist id="drugList"></datalist><input type="number" placeholder="الكمية"></div>
+      <div class="drug-row"><input list="drugList" class="drug-input" placeholder="دواء"><input type="number" class="drug-qty" placeholder="الكمية"></div>
+      <div class="drug-row"><input list="drugList" class="drug-input" placeholder="دواء"><input type="number" class="drug-qty" placeholder="الكمية"></div>
+      <div class="drug-row"><input list="drugList" class="drug-input" placeholder="دواء"><input type="number" class="drug-qty" placeholder="الكمية"></div>
+      <div class="drug-row"><input list="drugList" class="drug-input" placeholder="دواء"><input type="number" class="drug-qty" placeholder="الكمية"></div>
+    </div>
+
+    <div class="card">
+      <h3>مكان العلاج</h3>
+      <input list="treatmentPlaceList" id="treatmentPlace" placeholder="اختر مكان العلاج">
+      <datalist id="treatmentPlaceList">
+        <option>في العيادة</option><option>خارج العيادة</option>
+        <option>وصف علاج</option><option>متنقلة</option>
+      </datalist>
+      <h3>التاريخ</h3>
+      <div class="row"><input type="date" id="treatFinancialDate"></div>
+      <h3>مدخل البيانات</h3>
+      <input list="treatDataEntryList" id="treatDataEntryInput" placeholder="اختر مدخل البيانات">
+      <datalist id="treatDataEntryList"></datalist>
+    </div>
+
+    <div class="card">
+      <h3>مدخل البيانات (التحديث)</h3>
+      <input list="treatDataUpdaterList" id="treatDataUpdaterInput" placeholder="اختر مدخل البيانات للتحديث">
+      <datalist id="treatDataUpdaterList"></datalist>
+      <h3>عدد الحيوانات</h3>
+      <div class="animals-grid">
+        <div class="animal-item"><label>ماعز</label><input type="number" id="animal_goat"></div>
+        <div class="animal-item"><label>أغنام</label><input type="number" id="animal_sheep"></div>
+        <div class="animal-item"><label>أبقار</label><input type="number" id="animal_cow"></div>
+        <div class="animal-item"><label>جمال</label><input type="number" id="animal_camel"></div>
+        <div class="animal-item"><label>خيول</label><input type="number" id="animal_horse"></div>
+        <div class="animal-item"><label>قطط</label><input type="number" id="animal_cat"></div>
+        <div class="animal-item"><label>كلاب</label><input type="number" id="animal_dog"></div>
+        <div class="animal-item"><label>دواجن</label><input type="number" id="animal_poultry"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>البيانات المالية</h3>
+      <div class="row" style="justify-content:center; margin:4px 0 16px;">
+        <label style="width:auto; margin-left:10px;">الإيصال</label>
+        <input type="number" id="receipt" style="width:auto; min-width:150px;" step="1"
+          oninput="if(this.value.length>0) this.value=Math.abs(parseInt(this.value,10))">
+      </div>
+      <div class="row" style="justify-content:center; margin:4px 0 16px;">
+        <label style="width:auto; margin-left:10px;">المبلغ</label>
+        <input type="number" step="0.1" id="amount" style="width:auto; min-width:150px;">
+      </div>
+      <h3>الملاحظات</h3>
+      <textarea id="treatNotes" placeholder="ملاحظات إضافية..." style="display:block; margin:12px auto; width:90%;"></textarea>
+    </div>
+
+    <div class="card full-width">
+      <div class="btns">
+        <button class="save"   id="treatSaveBtn">حفظ</button>
+        <button class="update" id="treatUpdateBtn">تحديث</button>
+        <button class="clear"  id="treatClearBtn">مسح</button>
+        <button class="delete" id="treatDeleteBtn">حذف البيانات</button>
+        <button class="close"  onclick="google.script.host.close()">إغلاق</button>
+        <button id="treatSearchBtn">بحث</button>
+        <button id="treatMainMenuBtn" style="background:#3498db; color:white;">القائمة الرئيسية</button>
+        <button id="treatSearchRecordBtn" style="background:#9b59b6; color:white;">البحث في سجل العلاج</button>
+      </div>
+    </div>
+
+    <input type="hidden" id="mirrorCaseNumber">
+
+  </div><!-- /right-panel العلاج -->
+</div><!-- /main-container العلاج -->
+
+
+<script>
+/* ============================================================
+   دوال مشتركة
+   ============================================================ */
+let isSaving = false;
+
+function showMessage(message, isError, type) {
+  isError = isError || false;
+  const ex = document.querySelector('.toast');
+  if (ex) ex.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  if (type === 'info') toast.classList.add('info');
+  else if (isError)    toast.classList.add('error');
+  else                 toast.classList.add('success');
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 5000);
+}
+
+function showConfirm(message, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+  box.innerHTML =
+    '<h3>تأكيد العملية</h3><p>' + message + '</p>' +
+    '<div class="modal-buttons">' +
+      '<button class="modal-btn confirm">نعم</button>' +
+      '<button class="modal-btn cancel">إلغاء</button>' +
+    '</div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add('show'), 10);
+  const close = () => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 300); };
+  box.querySelector('.confirm').onclick = () => { close(); onConfirm(); };
+  box.querySelector('.cancel').onclick  = close;
+  overlay.onclick = e => { if (e.target === overlay) close(); };
+}
+
+function safeSetValue(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.value = (value !== undefined && value !== null) ? value : '';
+}
+
+/* ============================================================
+   التبديل بين سجل العلاج وسجل التحصين
+   ============================================================ */
+function showRecord(which) {
+  const sT = document.getElementById('sectionTreatment');
+  const sV = document.getElementById('sectionVaccination');
+  const bT = document.getElementById('btnShowTreatment');
+  const bV = document.getElementById('btnShowVaccination');
+
+  if (which === 'treatment') {
+    sT.classList.add('visible');    sV.classList.remove('visible');
+    bT.classList.add('active');     bV.classList.remove('active');
+  } else {
+    sV.classList.add('visible');    sT.classList.remove('visible');
+    bV.classList.add('active');     bT.classList.remove('active');
+    loadVaccinationDailyData();
+  }
+}
+
+/* ============================================================
+   سجل العلاج اليومي
+   ============================================================ */
+function loadData() {
+  google.script.run.withSuccessHandler(function(data) {
+    const table = document.getElementById('dataTable');
+    table.innerHTML = '';
+    if (!data || !data.length) { table.innerHTML = "<tr><td colspan='100'>لا توجد بيانات</td></tr>"; return; }
+    let h = '<thead><tr>';
+    data[0].forEach(c => { h += '<th>' + (c||' ') + '</th>'; });
+    h += '</tr></thead><tbody>';
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const miss = row.some(c => c && c.toString().includes('البيانات ناقصة'));
+      h += miss ? '<tr class="data-missing">' : '<tr>';
+      row.forEach(cell => { h += '<td>' + (cell===''?' ':cell) + '</td>'; });
+      h += '</tr>';
+    }
+    h += '</tbody>';
+    table.innerHTML = h;
+  }).getAAAData();
+}
+
+/* ============================================================
+   سجل التحصين اليومي
+   ============================================================ */
+function loadVaccinationDailyData() {
+  const table = document.getElementById('vaccinationDailyTable');
+  if (table.dataset.loaded === '1') return;
+  table.innerHTML = '<tr><td style="text-align:center; padding:10px;">جاري تحميل البيانات...</td></tr>';
+  google.script.run
+    .withSuccessHandler(function(data) {
+      table.dataset.loaded = '1';
+      if (!data || !data.length) {
+        table.innerHTML = "<tr><td colspan='100'>لا توجد بيانات تحصين</td></tr>";
+        return;
+      }
+      let h = '<thead><tr>';
+      data[0].forEach(c => { h += '<th>' + (c||' ') + '</th>'; });
+      h += '</tr></thead><tbody>';
+      for (let i = 1; i < data.length; i++) {
+        h += '<tr>';
+        data[i].forEach(cell => { h += '<td>' + (cell===''?' ':cell) + '</td>'; });
+        h += '</tr>';
+      }
+      h += '</tbody>';
+      table.innerHTML = h;
+    })
+    .withFailureHandler(function() {
+      table.innerHTML = '<tr><td style="color:red;">خطأ في تحميل بيانات التحصين</td></tr>';
+    })
+    .getVaccinationDailyData();
+}
+
+/* ============================================================
+   دوال التحصين
+   ============================================================ */
+function loadPhoneNumbers() {
+  google.script.run.withSuccessHandler(phones => {
+    const list = document.getElementById('phoneList');
+    list.innerHTML = '';
+    phones.sort().forEach(p => { const o = document.createElement('option'); o.value = p; list.appendChild(o); });
+  }).getPhoneNumbers();
+}
+
+function loadDataEntryOptions() {
+  google.script.run.withSuccessHandler(entries => {
+    ['dataEntryList','dataUpdaterList','treatDataEntryList','treatDataUpdaterList'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '';
+      entries.sort().forEach(e => { const o = document.createElement('option'); o.value = e; el.appendChild(o); });
+    });
+  }).getDataEntryOptions();
+}
+
+function fetchBreederData(phone) {
+  if (!phone) {
+    ['nameInput','possessionInput','regionInput','civilInput'].forEach(id => safeSetValue(id, ''));
+    return;
+  }
+  google.script.run.withSuccessHandler(data => {
+    if (data && data.length === 4) {
+      safeSetValue('nameInput', data[0]); safeSetValue('possessionInput', data[1]);
+      safeSetValue('regionInput', data[2]); safeSetValue('civilInput', data[3]);
+    } else showMessage('لم يتم العثور على بيانات لهذا الرقم', true);
+  }).getBreederData(phone);
+}
+
+function fetchVaccinationDataByPhone(phone) {
+  const container = document.getElementById('vaccinationDataDisplay');
+  if (!phone) { container.innerHTML = ''; return; }
+  container.innerHTML = '<p style="text-align:center;font-weight:bold;">جاري جلب البيانات...</p>';
+  google.script.run.withSuccessHandler(function(result) {
+    if (!result || !result.rows || !result.rows.length) {
+      container.innerHTML = '<p style="text-align:center;color:#777;">لا توجد بيانات تحصين للمربي</p>';
+      return;
+    }
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr>';
+    (result.headers||[]).forEach(h => { html += '<th style="border:1px solid #ccc;padding:4px;">'+(h||'')+'</th>'; });
+    html += '</tr></thead><tbody>';
+    result.rows.forEach(row => {
+      html += '<tr>';
+      row.forEach(cell => { html += '<td style="border:1px solid #ccc;padding:4px;">'+(cell||'')+'</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }).withFailureHandler(() => {
+    container.innerHTML = '<p style="color:red;">حدث خطأ في جلب بيانات التحصين</p>';
+  }).getVaccinationDataByPhone(phone);
+}
+
+function fillVaccinationForm(data) {
+  ['caseNumber','phoneInput','nameInput','possessionInput','regionInput','civilInput',
+   'dataUpdaterInput','dataEntryInput','searchUpdate','notes'].forEach(id => safeSetValue(id, data[id.replace(/Input$/,'').replace(/financial/,'financial')] || data[id] || ''));
+  safeSetValue('caseNumber',       data.caseNumber);
+  safeSetValue('phoneInput',       data.phone);
+  safeSetValue('nameInput',        data.name);
+  safeSetValue('possessionInput',  data.possession);
+  safeSetValue('regionInput',      data.region);
+  safeSetValue('civilInput',       data.civil);
+  safeSetValue('dataUpdaterInput', data.dataUpdater);
+  safeSetValue('dataEntryInput',   data.dataEntry);
+  safeSetValue('searchUpdate',     data.searchUpdate);
+  safeSetValue('notes',            data.notes);
+  const dFields = ['intox_sheep','intox_goat','pock_sheep','pock_goat','fmd_sheep','fmd_goat',
+    'fmd_cow','lumpy_cow','rabies_sheep','rabies_goat','rabies_cow','rabies_camel','rabies_horse'];
+  dFields.forEach(id => safeSetValue(id, data[id]));
+  showMessage('تم تحميل بيانات الحالة بنجاح', false);
+}
+
+function clearVaccinationForm() {
+  const today = new Date().toLocaleDateString('en-CA');
+  safeSetValue('topDate', today); safeSetValue('financialDate', today);
+  ['caseNumber','searchUpdate','dataUpdaterInput','phoneInput','nameInput','possessionInput',
+   'regionInput','civilInput','dataEntryInput','notes','copyingdata'].forEach(id => safeSetValue(id, ''));
+  ['intox_sheep','intox_goat','pock_sheep','pock_goat','fmd_sheep','fmd_goat','fmd_cow',
+   'lumpy_cow','rabies_sheep','rabies_goat','rabies_cow','rabies_camel','rabies_horse'].forEach(id => safeSetValue(id, ''));
+  const vd = document.getElementById('vaccinationDataDisplay');
+  if (vd) vd.innerHTML = '';
+  showMessage('تم مسح جميع الحقول', false);
+}
+
+function saveVaccinationData() {
+  if (isSaving) return;
+  if (!document.getElementById('phoneInput').value.trim()) { showMessage('الرجاء إدخال رقم الهاتف', true); return; }
+  if (!document.getElementById('dataEntryInput').value.trim()) { showMessage('الرجاء اختيار مدخل البيانات', true); return; }
+  if (document.getElementById('copyingdata').value.trim() !== '') { showMessage('لا يمكن حفظ البيانات في وضع التحديث', true); return; }
+  const dFields = ['intox_sheep','intox_goat','pock_sheep','pock_goat','fmd_sheep','fmd_goat',
+    'fmd_cow','lumpy_cow','rabies_sheep','rabies_goat','rabies_cow','rabies_camel','rabies_horse'];
+  if (!dFields.some(f => { const el=document.getElementById(f); return el&&el.value.trim()!==''&&!isNaN(el.value)&&Number(el.value)!==0; })) {
+    showMessage('يجب تعبئة مربع واحد على الأقل في جدول الأمراض الوبائية', true); return;
+  }
+  isSaving = true;
+  const data = {
+    caseNumber: document.getElementById('caseNumber').value,
+    searchUpdate: document.getElementById('searchUpdate').value,
+    topDate: document.getElementById('topDate').value,
+    phone: document.getElementById('phoneInput').value,
+    name: document.getElementById('nameInput').value,
+    possession: document.getElementById('possessionInput').value,
+    region: document.getElementById('regionInput').value,
+    civil: document.getElementById('civilInput').value,
+    notes: document.getElementById('notes').value,
+    dataEntry: document.getElementById('dataEntryInput').value,
+    dataUpdater: document.getElementById('dataUpdaterInput').value,
+    financialDate: document.getElementById('financialDate').value,
+  };
+  [...dFields,'lumpy_sheep','lumpy_goat','lumpy_camel'].forEach(f => {
+    const el = document.getElementById(f); data[f] = el ? el.value : '';
+  });
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'جاري الحفظ...'; btn.disabled = true;
+  google.script.run.withSuccessHandler(result => {
+    btn.textContent = 'حفظ'; btn.disabled = false; isSaving = false;
+    if (result.success) {
+      showMessage('تم حفظ البيانات بنجاح', false);
+      clearVaccinationForm();
+      // إعادة تحميل سجل التحصين
+      const vt = document.getElementById('vaccinationDailyTable');
+      if (vt) { delete vt.dataset.loaded; if (document.getElementById('sectionVaccination').classList.contains('visible')) loadVaccinationDailyData(); }
+    } else showMessage('حدث خطأ: ' + result.message, true);
+  }).withFailureHandler(err => {
+    btn.textContent = 'حفظ'; btn.disabled = false; isSaving = false;
+    showMessage('خطأ في الاتصال: ' + err.message, true);
+  }).saveDataToSheet(data);
+}
+
+function updateVaccinationData() {
+  const caseNum = document.getElementById('caseNumber').value.trim();
+  if (!caseNum) { showMessage('الرجاء إدخال رقم الحالة المراد تحديثها', true); return; }
+  if (!document.getElementById('phoneInput').value.trim()) { showMessage('الرجاء إدخال رقم الهاتف', true); return; }
+  if (!document.getElementById('dataUpdaterInput').value.trim()) { showMessage('الرجاء اختيار مدخل البيانات (التحديث)', true); return; }
+  const dFields = ['intox_sheep','intox_goat','pock_sheep','pock_goat','fmd_sheep','fmd_goat',
+    'fmd_cow','lumpy_cow','rabies_sheep','rabies_goat','rabies_cow','rabies_camel','rabies_horse'];
+  if (!dFields.some(f => { const el=document.getElementById(f); return el&&el.value.trim()!==''&&!isNaN(el.value)&&Number(el.value)!==0; })) {
+    showMessage('يجب تعبئة مربع واحد على الأقل في جدول الأمراض الوبائية', true); return;
+  }
+  const data = { caseNumber: caseNum,
+    phone: document.getElementById('phoneInput').value, name: document.getElementById('nameInput').value,
+    possession: document.getElementById('possessionInput').value, region: document.getElementById('regionInput').value,
+    civil: document.getElementById('civilInput').value, notes: document.getElementById('notes').value,
+    dataEntry: document.getElementById('dataEntryInput').value, dataUpdater: document.getElementById('dataUpdaterInput').value,
+    financialDate: document.getElementById('financialDate').value,
+  };
+  [...dFields,'lumpy_sheep','lumpy_goat','lumpy_camel'].forEach(f => { const el=document.getElementById(f); data[f]=el?el.value:''; });
+  const btn = document.getElementById('updateBtn');
+  btn.textContent = 'جاري التحديث...'; btn.disabled = true;
+  google.script.run.withSuccessHandler(result => {
+    btn.textContent = 'تحديث'; btn.disabled = false;
+    if (result.success) {
+      showMessage('تم تحديث البيانات بنجاح', false);
+      clearVaccinationForm();
+      const vt = document.getElementById('vaccinationDailyTable');
+      if (vt) { delete vt.dataset.loaded; if (document.getElementById('sectionVaccination').classList.contains('visible')) loadVaccinationDailyData(); }
+    } else showMessage('حدث خطأ: ' + result.message, true);
+  }).withFailureHandler(() => { btn.textContent = 'تحديث'; btn.disabled = false; showMessage('خطأ في الاتصال', true); })
+  .updateDataToSheet(data);
+}
+
+function searchVaccinationCase() {
+  const caseNum = document.getElementById('caseNumber').value.trim();
+  if (!caseNum) { showMessage('الرجاء إدخال رقم الحالة', true); return; }
+  showMessage('جاري جلب البيانات...', false, 'info');
+  google.script.run.withSuccessHandler(result => {
+    if (result.success) { fillVaccinationForm(result); fetchVaccinationDataByPhone(document.getElementById('phoneInput').value); }
+    else showMessage(result.message, true);
+  }).withFailureHandler(() => showMessage('خطأ في الاتصال', true)).searchCaseData(caseNum);
+}
+
+function deleteVaccinationCase() {
+  const caseNum = document.getElementById('caseNumber').value.trim();
+  if (!caseNum) { showMessage('الرجاء إدخال رقم الحالة المراد حذفها', true); return; }
+  showConfirm('هل أنت متأكد من حذف الحالة رقم ' + caseNum + '؟', () => {
+    const btn = document.getElementById('deleteBtn');
+    btn.textContent = 'جاري الحذف...'; btn.disabled = true;
+    google.script.run.withSuccessHandler(result => {
+      btn.textContent = 'حذف البيانات'; btn.disabled = false;
+      if (result.success) { showMessage('تم حذف الحالة بنجاح', false); clearVaccinationForm(); }
+      else showMessage(result.message, true);
+    }).withFailureHandler(() => { btn.textContent = 'حذف البيانات'; btn.disabled = false; showMessage('خطأ في الاتصال', true); })
+    .deleteCaseData(caseNum);
+  });
+}
+
+// ربط أزرار التحصين
+document.getElementById('saveBtn').onclick   = saveVaccinationData;
+document.getElementById('updateBtn').onclick = updateVaccinationData;
+document.getElementById('clearBtn').onclick  = clearVaccinationForm;
+document.getElementById('deleteBtn').onclick = deleteVaccinationCase;
+document.getElementById('searchBtn').onclick = searchVaccinationCase;
+document.getElementById('caseNumber').addEventListener('change', () => { if (document.getElementById('caseNumber').value.trim()) searchVaccinationCase(); });
+document.getElementById('caseNumber').addEventListener('input', function() { const v=this.value.trim(); const cp=document.getElementById('copyingdata'); if(cp&&v!=='') cp.value=v; });
+document.getElementById('phoneInput').addEventListener('change', function() { fetchBreederData(this.value); fetchVaccinationDataByPhone(this.value); });
+document.getElementById('mainMenuBtn').onclick = () => { try { google.script.host.editor.focus(); } catch(e) { showMessage('لا يمكن فتح القائمة الرئيسية', true); } };
+document.getElementById('searchRecordBtn').onclick = () => showMessage('يمكنك البحث باستخدام رقم الحالة أو الضغط على أي صف في الجدول', false);
+
+/* ============================================================
+   دوال واجهة العلاج
+   ============================================================ */
+function loadTreatPhoneNumbers() {
+  google.script.run.withSuccessHandler(phones => {
+    const list = document.getElementById('treatPhoneList');
+    list.innerHTML = '';
+    phones.sort().forEach(p => { const o = document.createElement('option'); o.value = p; list.appendChild(o); });
+  }).getPhoneNumbers();
+}
+function loadDiseaseOptions() {
+  google.script.run.withSuccessHandler(diseases => {
+    const dl = document.getElementById('diseaseList'); dl.innerHTML = '';
+    diseases.sort().forEach(d => { const o = document.createElement('option'); o.value = d; dl.appendChild(o); });
+  }).getDiseases();
+}
+function loadDrugOptions() {
+  google.script.run.withSuccessHandler(drugs => {
+    const dl = document.getElementById('drugList'); dl.innerHTML = '';
+    drugs.sort().forEach(d => { const o = document.createElement('option'); o.value = d; dl.appendChild(o); });
+  }).getDrugs();
+}
+function loadTypeOptions() {
+  const types = ['ماعز','أغنام','أبقار','جمال','خيول','قطط','كلاب','دواجن'].sort();
+  let dl = document.getElementById('typeListFixed');
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'typeListFixed'; document.body.appendChild(dl); }
+  dl.innerHTML = '';
+  types.forEach(t => { const o = document.createElement('option'); o.value = t; dl.appendChild(o); });
+}
+function fetchTreatBreederData(phone) {
+  if (!phone) { ['treatNameInput','treatPossessionInput','treatRegionInput','treatCivilInput'].forEach(id => safeSetValue(id,'')); return; }
+  google.script.run.withSuccessHandler(data => {
+    if (data && data.length===4) {
+      safeSetValue('treatNameInput',data[0]); safeSetValue('treatPossessionInput',data[1]);
+      safeSetValue('treatRegionInput',data[2]); safeSetValue('treatCivilInput',data[3]);
+    } else showMessage('لم يتم العثور على بيانات لهذا الرقم', true);
+  }).getBreederData(phone);
+}
+function fillTreatmentForm(data) {
+  safeSetValue('treatCaseNumber',      data.caseNumber);
+  safeSetValue('treatPhoneInput',      data.phone);
+  safeSetValue('treatNameInput',       data.name);
+  safeSetValue('treatPossessionInput', data.possession);
+  safeSetValue('treatRegionInput',     data.region);
+  safeSetValue('treatCivilInput',      data.civil);
+  safeSetValue('treatDataUpdaterInput',data.dataUpdater);
+  safeSetValue('treatDataEntryInput',  data.dataEntry);
+  safeSetValue('treatNotes',           data.notes);
+  safeSetValue('treatmentPlace',       data.treatmentPlace);
+  safeSetValue('receipt',              data.receipt);
+  safeSetValue('amount',               data.amount);
+  safeSetValue('treatFinancialDate',   data.financialDate);
+  safeSetValue('treatTopDate',         data.financialDate);
+  document.querySelectorAll('.diagnosis-row').forEach((row,i) => {
+    const ins = row.querySelectorAll('input');
+    if(ins[0]) ins[0].value = (data.diseases&&data.diseases[i])||'';
+    if(ins[1]) ins[1].value = (data.types&&data.types[i])||'';
+    if(ins[2]) ins[2].value = (data.diseaseCounts&&data.diseaseCounts[i])||'';
+  });
+  document.querySelectorAll('.drug-row').forEach((row,i) => {
+    const di=row.querySelector('.drug-input'); const qi=row.querySelector('.drug-qty, input[type="number"]');
+    if(di) di.value=(data.drugs&&data.drugs[i])||'';
+    if(qi) qi.value=(data.drugQuantities&&data.drugQuantities[i])||'';
+  });
+  if (data.animals) {
+    ['goat','sheep','cow','camel','horse','cat','dog','poultry'].forEach(a => safeSetValue('animal_'+a, data.animals[a]));
+  }
+  showMessage('تم تحميل بيانات الحالة بنجاح', false);
+}
+function clearTreatmentForm() {
+  const today = new Date().toLocaleDateString('en-CA');
+  ['treatCaseNumber','treatSearchUpdate','treatDataUpdaterInput','mirrorCaseNumber','treatPhoneInput',
+   'treatmentPlace','treatNotes','treatDataEntryInput','receipt','amount'].forEach(id => safeSetValue(id,''));
+  safeSetValue('treatTopDate', today); safeSetValue('treatFinancialDate', today);
+  fetchTreatBreederData('');
+  document.querySelectorAll('.diagnosis-row input').forEach(i => i.value='');
+  document.querySelectorAll('.drug-row input').forEach(i => i.value='');
+  ['goat','sheep','cow','camel','horse','cat','dog','poultry'].forEach(a => safeSetValue('animal_'+a,''));
+}
+function saveTreatmentData() {
+  const data = {
+    caseNumber: document.getElementById('treatCaseNumber').value,
+    mirrorCaseNumber: document.getElementById('mirrorCaseNumber').value,
+    searchUpdate: document.getElementById('treatSearchUpdate')?document.getElementById('treatSearchUpdate').value:'',
+    topDate: document.getElementById('treatTopDate').value,
+    phone: document.getElementById('treatPhoneInput').value,
+    name: document.getElementById('treatNameInput').value,
+    possession: document.getElementById('treatPossessionInput').value,
+    region: document.getElementById('treatRegionInput').value,
+    civil: document.getElementById('treatCivilInput').value,
+    diseases:[], types:[], diseaseCounts:[], drugs:[], drugQuantities:[],
+    treatmentPlace: document.getElementById('treatmentPlace').value,
+    notes: document.getElementById('treatNotes').value,
+    dataEntry: document.getElementById('treatDataEntryInput').value,
+    animals:{ goat:document.getElementById('animal_goat').value, sheep:document.getElementById('animal_sheep').value,
+      cow:document.getElementById('animal_cow').value, camel:document.getElementById('animal_camel').value,
+      horse:document.getElementById('animal_horse').value, cat:document.getElementById('animal_cat').value,
+      dog:document.getElementById('animal_dog').value, poultry:document.getElementById('animal_poultry').value },
+    financialDate: document.getElementById('treatFinancialDate').value,
+    receipt: document.getElementById('receipt').value,
+    amount: document.getElementById('amount').value
+  };
+  document.querySelectorAll('.diagnosis-row').forEach(row => {
+    const ins=row.querySelectorAll('input');
+    data.diseases.push(ins[0]?ins[0].value:''); data.types.push(ins[1]?ins[1].value:''); data.diseaseCounts.push(ins[2]?ins[2].value:'');
+  });
+  document.querySelectorAll('.drug-row').forEach(row => {
+    data.drugs.push(row.querySelector('.drug-input')?row.querySelector('.drug-input').value:'');
+    data.drugQuantities.push(row.querySelector('input[type="number"]')?row.querySelector('input[type="number"]').value:'');
+  });
+  const btn = document.getElementById('treatSaveBtn');
+  btn.textContent='جاري الحفظ...'; btn.disabled=true;
+  google.script.run.withSuccessHandler(result => {
+    btn.textContent='حفظ'; btn.disabled=false;
+    if(result.success){ showMessage('تم حفظ البيانات بنجاح',false); clearTreatmentForm(); loadData(); }
+    else showMessage('حدث خطأ: '+result.message, true);
+  }).withFailureHandler(err=>{ btn.textContent='حفظ'; btn.disabled=false; showMessage('حدث خطأ في الاتصال: '+err.message,true); })
+  .saveDataToSheet(data);
+}
+function updateTreatmentData() {
+  const caseNumber = document.getElementById('treatCaseNumber').value.trim();
+  if(!caseNumber){ showMessage('الرجاء إدخال رقم الحالة المراد تحديثها',true); return; }
+  const data = {
+    caseNumber,
+    searchUpdate: document.getElementById('treatSearchUpdate')?document.getElementById('treatSearchUpdate').value:'',
+    topDate: document.getElementById('treatTopDate').value,
+    phone: document.getElementById('treatPhoneInput').value,
+    name: document.getElementById('treatNameInput').value,
+    possession: document.getElementById('treatPossessionInput').value,
+    region: document.getElementById('treatRegionInput').value,
+    civil: document.getElementById('treatCivilInput').value,
+    diseases:[], types:[], diseaseCounts:[], drugs:[], drugQuantities:[],
+    treatmentPlace: document.getElementById('treatmentPlace').value,
+    notes: document.getElementById('treatNotes').value,
+    dataEntry: document.getElementById('treatDataEntryInput').value,
+    dataUpdater: document.getElementById('treatDataUpdaterInput').value,
+    animals:{ goat:document.getElementById('animal_goat').value, sheep:document.getElementById('animal_sheep').value,
+      cow:document.getElementById('animal_cow').value, camel:document.getElementById('animal_camel').value,
+      horse:document.getElementById('animal_horse').value, cat:document.getElementById('animal_cat').value,
+      dog:document.getElementById('animal_dog').value, poultry:document.getElementById('animal_poultry').value },
+    financialDate: document.getElementById('treatFinancialDate').value,
+    receipt: document.getElementById('receipt').value,
+    amount: document.getElementById('amount').value
+  };
+  document.querySelectorAll('.diagnosis-row').forEach(row=>{
+    const ins=row.querySelectorAll('input');
+    data.diseases.push(ins[0]?.value||''); data.types.push(ins[1]?.value||''); data.diseaseCounts.push(ins[2]?.value||'');
+  });
+  document.querySelectorAll('.drug-row').forEach(row=>{
+    data.drugs.push(row.querySelector('.drug-input')?.value||'');
+    data.drugQuantities.push(row.querySelector('input[type="number"]')?.value||'');
+  });
+  const btn=document.getElementById('treatUpdateBtn');
+  btn.textContent='جاري التحديث...'; btn.disabled=true;
+  google.script.run.withSuccessHandler(result=>{
+    btn.textContent='تحديث'; btn.disabled=false;
+    if(result.success){ showMessage('تم تحديث البيانات بنجاح',false); clearTreatmentForm(); loadData(); }
+    else showMessage('حدث خطأ: '+result.message,true);
+  }).withFailureHandler(err=>{ btn.textContent='تحديث'; btn.disabled=false; showMessage('حدث خطأ في الاتصال: '+err.message,true); })
+  .updateDataToSheet(data);
+}
+function searchTreatmentCase() {
+  const caseNum=document.getElementById('treatCaseNumber').value.trim();
+  if(!caseNum){ showMessage('الرجاء إدخال رقم الحالة',true); return; }
+  google.script.run.withSuccessHandler(result=>{
+    if(result.success){ fillTreatmentForm(result); loadData(); }
+    else showMessage(result.message,true);
+  }).withFailureHandler(err=>showMessage('خطأ في الاتصال: '+err.message,true)).searchCaseData(caseNum);
+}
+function deleteTreatmentCase() {
+  const caseNum=document.getElementById('treatCaseNumber').value.trim();
+  if(!caseNum){ showMessage('الرجاء إدخال رقم الحالة المراد حذفها',true); return; }
+  showConfirm('هل أنت متأكد من حذف الحالة رقم '+caseNum+'؟', ()=>{
+    const btn=document.getElementById('treatDeleteBtn');
+    btn.textContent='جاري الحذف...'; btn.disabled=true;
+    google.script.run.withSuccessHandler(result=>{
+      btn.textContent='حذف البيانات'; btn.disabled=false;
+      if(result.success){ showMessage('تم حذف الحالة بنجاح',false); clearTreatmentForm(); loadData(); }
+      else showMessage(result.message,true);
+    }).withFailureHandler(err=>{ btn.textContent='حذف البيانات'; btn.disabled=false; showMessage('خطأ في الاتصال: '+err.message,true); })
+    .deleteCaseData(caseNum);
+  });
+}
+
+// ربط أزرار العلاج
+document.getElementById('treatSaveBtn').onclick   = saveTreatmentData;
+document.getElementById('treatUpdateBtn').onclick = updateTreatmentData;
+document.getElementById('treatClearBtn').onclick  = clearTreatmentForm;
+document.getElementById('treatDeleteBtn').onclick = deleteTreatmentCase;
+document.getElementById('treatSearchBtn').onclick = searchTreatmentCase;
+document.getElementById('treatPhoneInput').addEventListener('change', function(){ fetchTreatBreederData(this.value); });
+document.getElementById('treatCaseNumber').addEventListener('change', function(){ if(this.value.trim()) searchTreatmentCase(); });
+
+// النقر على صف في جدول العلاج
+document.getElementById('dataTable').addEventListener('click', function(e){
+  const row=e.target.closest('tr');
+  if(!row||!row.cells[0]) return;
+  const cn=row.cells[0].textContent.trim();
+  if(!cn) return;
+  document.getElementById('treatCaseNumber').value=cn;
+  google.script.run.withSuccessHandler(result=>{
+    if(result.success){ fillTreatmentForm(result); loadData(); }
+    else showMessage(result.message,true);
+  }).withFailureHandler(err=>showMessage('خطأ في الاتصال: '+err.message,true)).searchCaseData(cn);
+});
+
+// البحث في سجل العلاج
+const searchKeywordInput   = document.getElementById('searchKeyword');
+const searchStartDateInput = document.getElementById('searchStartDate');
+const searchEndDateInput   = document.getElementById('searchEndDate');
+let searchTimeout = null;
+
+function performSearch() {
+  const keyword=searchKeywordInput.value.trim();
+  const startDate=searchStartDateInput.value;
+  const endDate=searchEndDateInput.value;
+  if(!keyword&&!startDate&&!endDate){ document.getElementById('searchTable').innerHTML=''; return; }
+  google.script.run.withSuccessHandler(displaySearchResults)
+    .withFailureHandler(err=>showMessage('خطأ في البحث: '+err.message,true))
+    .searchInTreatmentSheet(keyword,startDate,endDate);
+}
+function displaySearchResults(data) {
+  const table=document.getElementById('searchTable');
+  table.innerHTML='';
+  if(!data||!data.length){ table.innerHTML='<tr><td>لا توجد نتائج</td></tr>'; return; }
+  let h='<thead><tr>';
+  data[0].forEach(c=>{h+='<th>'+c+'</th>';});
+  h+='</tr></thead><tbody>';
+  for(let i=1;i<data.length;i++){
+    h+='<tr>';
+    data[i].forEach(cell=>{h+='<td>'+(cell||'')+'</td>';});
+    h+='</tr>';
+  }
+  h+='</tbody>';
+  table.innerHTML=h;
+}
+searchKeywordInput.addEventListener('input', ()=>{ clearTimeout(searchTimeout); searchTimeout=setTimeout(performSearch,400); });
+searchStartDateInput.addEventListener('change', performSearch);
+searchEndDateInput.addEventListener('change', performSearch);
+searchKeywordInput.addEventListener('keypress', e=>{ if(e.key==='Enter') performSearch(); });
+
+// زر البحث في سجل العلاج (من صفحة العلاج)
+document.getElementById('treatSearchRecordBtn').onclick = function(){
+  const sc=document.getElementById('searchCard');
+  // إخفاء السجلين وشريط التبديل
+  document.getElementById('sectionTreatment').style.display='none';
+  document.getElementById('sectionVaccination').style.display='none';
+  document.querySelector('.records-toggle-bar').style.display='none';
+  sc.style.display='block';
+};
+
+// زر الرجوع
+document.getElementById('backToMainBtn').onclick = function(){
+  document.getElementById('searchCard').style.display='none';
+  // إعادة إظهار شريط التبديل والسجل النشط
+  document.querySelector('.records-toggle-bar').style.display='';
+  // استعادة الحالة السابقة (سجل العلاج افتراضياً)
+  document.getElementById('sectionTreatment').style.display='';
+  document.getElementById('sectionVaccination').style.display='';
+  showRecord('treatment');
+};
+
+// التحقق من رقم الإيصال
+document.getElementById('receipt').addEventListener('blur', function(){
+  const v=this.value.trim(); if(!v) return;
+  const self=this;
+  google.script.run.withSuccessHandler(result=>{
+    if(result.exists){
+      showMessage('❌ رقم الإيصال موجود مسبقاً',true);
+      self.style.backgroundColor='#ffcccc'; self.style.border='2px solid red';
+      setTimeout(()=>{ self.style.backgroundColor=''; self.style.border=''; },3000);
+    }
+  }).checkReceiptNumber(v);
+});
+
+/* ============================================================
+   تحميل أولي
+   ============================================================ */
+window.onload = function() {
+  const today = new Date().toLocaleDateString('en-CA');
+  ['topDate','financialDate','treatTopDate','treatFinancialDate'].forEach(id => safeSetValue(id, today));
+  loadData();
+  loadPhoneNumbers();
+  loadTreatPhoneNumbers();
+  loadDiseaseOptions();
+  loadDrugOptions();
+  loadTypeOptions();
+  loadDataEntryOptions();
+};
+</script>
+</body>
+</html>
+
+  `).setTitle('نظام إدارة التحصين').setFaviconUrl('https://www.gstatic.com/images/branding/product/1x/docs_48dp.png');
+  return html;
+}
+
+// --- باقي دوال الخادم كما هي دون تغيير ---
+function getVaccinationDataByPhone(phone) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("تحصين");
+    if (!sheet) return { rows: [], headers: [] };
+    var range = sheet.getRange("A2:H");
+    var values = range.getValues();
+    var headers = sheet.getRange("A1:H1").getValues()[0];
+    var searchPhone = phone ? phone.toString().trim() : "";
+    var filtered = values.filter(function(row) {
+      if (!row[0]) return false;
+      var cellPhone = row[0].toString().trim();
+      return cellPhone === searchPhone;
+    });
+    var processedRows = filtered.map(function(row) {
+      return row.map(function(cell) {
+        if (cell instanceof Date) {
+          return Utilities.formatDate(cell, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        }
+        return cell;
+      });
+    });
+    return { headers: headers, rows: processedRows };
+  } catch (e) {
+    return { rows: [], headers: [], error: e.message };
+  }
+}
+
+function getBreederData(phone) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("بيانات المربي");
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] == phone) {
+      return [data[i][1] || "", data[i][2] || "", data[i][3] || "", data[i][4] || ""];
+    }
+  }
+  return [];
+}
+
+function getPhoneNumbers() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("بيانات المربي");
+  if (!sheet) return [];
+  const data = sheet.getRange("A2:A").getValues();
+  return data.filter(row => row[0] !== "").map(row => row[0]);
+}
+
+function getDataEntryOptions() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("بيانات العيادة");
+  if (!sheet) return [];
+  const data = sheet.getRange("G2:G20").getValues();
+  return data.filter(row => row[0] !== "").map(row => row[0]);
+}
+
+function saveDataToSheet(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("بيانات التحصين");
+    
+    if (!sheet) {
+      sheet = ss.insertSheet("بيانات التحصين");
+      var headers = [
+        "رقم الهاتف", "الاسم", "رقم الحيازة", "المنطقة", "الرقم المدني",
+        "التسمم المعوي (أغنام)", "التسمم المعوي (ماعز)",
+        "طاعون/جدري (أغنام)", "طاعون/جدري (ماعز)",
+        "الحمى القلاعية (أغنام)", "الحمى القلاعية (ماعز)", "الحمى القلاعية (أبقار)",
+        "السعار (أغنام)", "السعار (ماعز)", "السعار (أبقار)", "السعار (جمل)", "السعار (خيول)",
+        "التهاب الجلد العقدي (أبقار)", "التهاب الجلد العقدي (أغنام)", "التهاب الجلد العقدي (ماعز)", "التهاب الجلد العقدي (جمل)",
+        "الملاحظات", "رقم الحالة", "مدخل البيانات (التحديث)", "مدخل البيانات", "التاريخ"
+      ];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    }
+    
+    var lastRow = sheet.getLastRow();
+    var nextRow = lastRow + 1;
+    
+    var caseNumber = data.caseNumber;
+    if (!caseNumber || caseNumber.trim() === "") {
+      caseNumber = "CASE_" + new Date().getTime();
+    }
+    
+    var rowData = [
+         "",
+      data.phone || "",
+      data.name || "",
+      data.possession || "",
+      data.region || "",
+      data.civil || "",
+      data.intox_sheep || "",
+      data.intox_goat || "",
+      data.pock_sheep || "",
+      data.pock_goat || "",
+      data.fmd_sheep || "",
+      data.fmd_goat || "",
+      data.fmd_cow || "",
+      data.rabies_sheep || "",
+      data.rabies_goat || "",
+      data.rabies_cow || "",
+      data.rabies_camel || "",
+      data.rabies_horse || "",
+      data.lumpy_cow || "",
+      data.lumpy_sheep || "",
+      data.lumpy_goat || "",
+      data.lumpy_camel || "",
+      data.notes || "",
+      "",, 
+      data.dataEntry || "",
+      data.financialDate || ""
+    ];
+    
+    sheet.getRange(nextRow, 1, 1, rowData.length).setValues([rowData]);
+    
+    return { success: true, message: "تم حفظ البيانات بنجاح" };
+    
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function searchCaseData(caseNumber) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("بيانات التحصين");
+    if (!sheet) {
+      return { success: false, message: "ورقة بيانات التحصين غير موجودة" };
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) {
+      return { success: false, message: "لا توجد بيانات محفوظة" };
+    }
+    
+    var rowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === caseNumber.toString().trim()) {
+        rowIndex = i;
+        break;
+      }
+    }
+    
+    if (rowIndex === -1) {
+      return { success: false, message: "لم يتم العثور على الحالة رقم " + caseNumber };
+    }
+    
+    var row = data[rowIndex];
+    
+    var result = {
+      caseNumber: row[0] || "",
+      phone: row[1] || "",
+      name: row[2] || "",
+      possession: row[3] || "",
+      region: row[4] || "",
+      civil: row[5] || "",
+      intox_sheep: row[6] || "",
+      intox_goat: row[7] || "",
+      pock_sheep: row[8] || "",
+      pock_goat: row[9] || "",
+      fmd_sheep: row[10] || "",
+      fmd_goat: row[11] || "",
+      fmd_cow: row[12] || "",
+      rabies_sheep: row[13] || "",
+      rabies_goat: row[14] || "",
+      rabies_cow: row[15] || "",
+      rabies_camel: row[16] || "",
+      rabies_horse: row[17] || "",
+      lumpy_cow: row[18] || "",
+      lumpy_sheep: row[19] || "",
+      lumpy_goat: row[20] || "",
+      lumpy_camel: row[21] || "",
+      notes: row[22] || "",
+      dataEntry: row[25] || ""
+    };
+    
+    return { success: true, ...result };
+    
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function updateDataToSheet(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("بيانات التحصين");
+    if (!sheet) {
+      return { success: false, message: "ورقة بيانات التحصين غير موجودة" };
+    }
+
+    var allData = sheet.getDataRange().getValues();
+    if (allData.length < 2) {
+      return { success: false, message: "لا توجد بيانات محفوظة للتحديث" };
+    }
+
+    var caseNumber = data.caseNumber ? data.caseNumber.toString().trim() : "";
+    if (!caseNumber) {
+      return { success: false, message: "رقم الحالة مطلوب للتحديث" };
+    }
+
+    var targetRowIndex = -1;
+    for (var i = 1; i < allData.length; i++) {
+      if (allData[i][0] && allData[i][0].toString().trim() === caseNumber) {
+        targetRowIndex = i;
+        break;
+      }
+    }
+
+    if (targetRowIndex === -1) {
+      return { success: false, message: "لم يتم العثور على الحالة رقم " + caseNumber };
+    }
+
+    var updatedRow = [
+               "",
+      data.phone || "",
+      data.name || "",
+      data.possession || "",
+      data.region || "",
+      data.civil || "",
+      data.intox_sheep || "",
+      data.intox_goat || "",
+      data.pock_sheep || "",
+      data.pock_goat || "",
+      data.fmd_sheep || "",
+      data.fmd_goat || "",
+      data.fmd_cow || "",
+      data.rabies_sheep || "",
+      data.rabies_goat || "",
+      data.rabies_cow || "",
+      data.rabies_camel || "",
+      data.rabies_horse || "",
+      data.lumpy_cow || "",
+      data.lumpy_sheep || "",
+      data.lumpy_goat || "",
+      data.lumpy_camel || "",
+      data.notes || "",
+      data.dataUpdater || "",
+      data.financialDate || ""
+    ];
+
+    sheet.getRange(targetRowIndex + 1, 1, 1, updatedRow.length).setValues([updatedRow]);
+
+    return { success: true, message: "تم تحديث البيانات بنجاح" };
+
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
+function deleteCaseData(caseNumber) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("بيانات التحصين");
+    if (!sheet) {
+      return { success: false, message: "ورقة بيانات التحصين غير موجودة" };
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) {
+      return { success: false, message: "لا توجد بيانات محفوظة" };
+    }
+    
+    var rowToDelete = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === caseNumber.toString().trim()) {
+        rowToDelete = i + 1;
+        break;
+      }
+    }
+    
+    if (rowToDelete === -1) {
+      return { success: false, message: "لم يتم العثور على الحالة رقم " + caseNumber };
+    }
+    
+    sheet.deleteRow(rowToDelete);
+    
+    return { success: true, message: "تم حذف الحالة بنجاح" };
+    
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
