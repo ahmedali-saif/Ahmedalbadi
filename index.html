@@ -345,7 +345,7 @@
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
             if (result.status === 'success') {
-                showMessage('✅ تم حفظ رقم الباقة والموقع بنجاح!', 'success');
+                showMessage('✅ تم حفظ الموقع بنجاح!', 'success');
             } else {
                 throw new Error(result.message || 'خطأ من الخادم');
             }
