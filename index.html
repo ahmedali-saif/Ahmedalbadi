@@ -292,7 +292,7 @@
         currentMarker = L.marker([lat, lng]).addTo(map).bindPopup(`📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`).openPopup();
         map.setView([lat, lng], 14);
         document.getElementById('coords').innerHTML = `${lat.toFixed(6)}°, ${lng.toFixed(6)}°`;
-        document.getElementById('locationName').innerHTML = '⏳ جاري جلب العنوان...';
+        document.getElementById('locationName').innerHTML = '⏳ جلب العنوان...';
         const address = await reverseGeocode(lat, lng);
         currentAddress = address;
         document.getElementById('locationName').innerHTML = address;
@@ -305,7 +305,7 @@
             showToast('متصفحك لا يدعم تحديد الموقع', 'error');
             return;
         }
-        showToast('جاري تحديد موقعك...', 'loading');
+        showToast('تحديد موقعك...', 'loading');
         navigator.geolocation.getCurrentPosition(
             async (pos) => {
                 await updateMapAndUI(pos.coords.latitude, pos.coords.longitude);
@@ -335,7 +335,7 @@
             return;
         }
 
-        showToast('⏳ جاري الإرسال إلى Google Sheets...', 'loading');
+        showToast('⏳ انتظر جاري إرسال الموقع ...', 'loading');
 
         try {
             const formData = new URLSearchParams();
