@@ -159,11 +159,11 @@
             text-align: center;
             z-index: 9999;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            animation: fadeInOut 3s ease forwards;
             pointer-events: none;
             white-space: normal;
             word-break: break-word;
             max-width: 90%;
+            transition: opacity 0.2s;
         }
         .toast-notification.success {
             background: rgba(40, 167, 69, 0.95);
@@ -176,12 +176,7 @@
         .toast-notification.loading {
             background: rgba(42, 82, 152, 0.95);
         }
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-            15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); visibility: hidden; }
-        }
+        /* إزالة تأثير الفيد أوت الثابت - سنتحكم يدويًا */
         @media (max-width: 600px) {
             #map { height: 350px; }
             .info-panel { padding: 1rem; }
@@ -253,16 +248,56 @@
     let currentLng = null;
     let currentAddress = '';
 
-    function showToast(message, type = 'success') {
-        const existingToast = document.querySelector('.toast-notification');
-        if (existingToast) existingToast.remove();
+    // ----- نظام الإشعارات المتقدم -----
+    let activeToastElement = null;
+    let autoCloseTimer = null;
+
+    // إزالة أي إشعار موجود حاليًا
+    function removeCurrentToast() {
+        if (autoCloseTimer) {
+            clearTimeout(autoCloseTimer);
+            autoCloseTimer = null;
+        }
+        if (activeToastElement && activeToastElement.parentNode) {
+            activeToastElement.remove();
+        }
+        activeToastElement = null;
+    }
+
+    /**
+     * عرض إشعار منبثق
+     * @param {string} message النص
+     * @param {string} type 'success', 'error', 'loading'
+     * @param {boolean} autoClose هل يتم الإغلاق التلقائي بعد 3 ثواني؟ (الافتراضي true ما عدا loading)
+     */
+    function showToast(message, type = 'success', autoClose = true) {
+        // إزالة أي إشعار سابق (بما في ذلك رسائل التحميل القديمة)
+        removeCurrentToast();
+        
         const toast = document.createElement('div');
         toast.className = `toast-notification ${type}`;
         toast.textContent = message;
         document.body.appendChild(toast);
-        setTimeout(() => {
-            if (toast && toast.parentNode) toast.remove();
-        }, 3000);
+        activeToastElement = toast;
+        
+        // إذا كان autoClose صحيحًا (وليس وضع تحميل دائم)، جدولة الإزالة بعد 3 ثوانٍ
+        if (autoClose) {
+            autoCloseTimer = setTimeout(() => {
+                if (activeToastElement && activeToastElement.parentNode) {
+                    activeToastElement.remove();
+                }
+                activeToastElement = null;
+                autoCloseTimer = null;
+            }, 3000);
+        } else {
+            // لا إغلاق تلقائي (يستخدم لرسالة "جاري الإرسال" حتى يجيء الرد)
+            autoCloseTimer = null;
+        }
+    }
+
+    // إخفاء الإشعار القائم يدويًا (بدون إظهار إشعار جديد)
+    function hideToast() {
+        removeCurrentToast();
     }
 
     async function reverseGeocode(lat, lng) {
@@ -302,21 +337,24 @@
 
     document.getElementById('gpsBtn').addEventListener('click', () => {
         if (!navigator.geolocation) {
-            showToast('متصفحك لا يدعم تحديد الموقع', 'error');
+            showToast('متصفحك لا يدعم تحديد الموقع', 'error', true);
             return;
         }
-        showToast('تحديد موقعك...', 'loading');
+        showToast('تحديد موقعك...', 'loading', false); // رسالة تحميل ثابتة لحين الحصول على الموقع
         navigator.geolocation.getCurrentPosition(
             async (pos) => {
+                // نجاح: إخفاء رسالة التحميل وعرض رسالة نجاح قصيرة
+                hideToast();
                 await updateMapAndUI(pos.coords.latitude, pos.coords.longitude);
-                showToast('تم تحديد موقعك الحالي', 'success');
+                showToast('تم تحديد موقعك الحالي', 'success', true);
             },
             (err) => {
+                hideToast();
                 let msg = 'فشل تحديد الموقع: ';
                 if (err.code === 1) msg += 'يرجى السماح بالوصول';
                 else if (err.code === 2) msg += 'الموقع غير متوفر';
                 else msg += 'حدث خطأ';
-                showToast(msg, 'error');
+                showToast(msg, 'error', true);
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
@@ -327,15 +365,17 @@
     async function sendToSheet() {
         const packageId = document.getElementById('packageId').value.trim();
         if (packageId === '') {
-            showToast('⚠️ الرجاء إدخال رقم الباقة', 'error');
+            showToast('⚠️ الرجاء إدخال رقم الباقة', 'error', true);
             return;
         }
         if (currentLat === null || currentLng === null) {
-            showToast('⚠️ الرجاء تحديد موقع على الخريطة أولاً', 'error');
+            showToast('⚠️ الرجاء تحديد موقع على الخريطة أولاً', 'error', true);
             return;
         }
 
-        showToast('⏳ انتظر جاري إرسال الموقع ...', 'loading');
+        // إزالة أي إشعار سابق ثم إظهار رسالة التحميل الثابتة (لا تختفي حتى نهاية الطلب)
+        hideToast();
+        showToast('⏳ انتظر جاري إرسال الموقع ...', 'loading', false);
 
         try {
             const formData = new URLSearchParams();
@@ -352,18 +392,26 @@
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const result = await response.json();
+            
+            // بعد وصول الرد نقوم بإخفاء رسالة التحميل الثابتة
+            hideToast();
+            
             if (result.status === 'success') {
-                // إظهار رسالة نجاح ثم التحويل بعد ثانية ونصف
-                showToast('✅ تم حفظ البيانات بنجاح! جاري تحويلك...', 'success');
+                // إظهار رسالة النجاح مع إغلاق تلقائي بعد 1.5 ثانية (ولكن سنقوم بالتحويل خلالها)
+                showToast('✅ تم حفظ البيانات بنجاح! جاري تحويلك...', 'success', true);
+                // الانتظار 1.5 ثانية للسماح برؤية الرسالة ثم التحويل
                 setTimeout(() => {
                     window.location.href = REDIRECT_URL;
                 }, 1500);
             } else {
+                // فشل من الخادم (رسالة خطأ)
                 throw new Error(result.message || 'خطأ من الخادم');
             }
         } catch (error) {
             console.error(error);
-            showToast('❌ فشل الإرسال. تأكد من الرابط والإنترنت', 'error');
+            // إخفاء رسالة التحميل (إذا بقيت لأي سبب)
+            hideToast();
+            showToast('❌ فشل الإرسال. تأكد من الرابط والإنترنت', 'error', true);
         }
     }
 
